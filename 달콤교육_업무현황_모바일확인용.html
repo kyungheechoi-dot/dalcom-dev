@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>달콤교육 업무 현황 대시보드</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --p:#4f46e5;--ph:#4338ca;--pl:#eef2ff;
+  --w:#fff;--bg:#f8fafc;
+  --g1:#f1f5f9;--g2:#e2e8f0;--g3:#cbd5e1;--g4:#94a3b8;--g5:#64748b;--g7:#334155;--g9:#0f172a;
+  --r:12px;--rs:8px;
+  --s1:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.04);
+  --s2:0 4px 12px rgba(0,0,0,.1),0 2px 4px rgba(0,0,0,.05);
+}
+body{font-family:'Pretendard','Apple SD Gothic Neo',-apple-system,BlinkMacSystemFont,'Malgun Gothic',sans-serif;background:var(--bg);color:var(--g7);min-height:100vh;font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button,select,input{font-family:inherit}
+
+/* ── Header ── */
+.hdr{position:sticky;top:0;z-index:200;background:var(--w);border-bottom:1px solid var(--g2);height:60px;padding:0 24px;display:flex;align-items:center;justify-content:space-between}
+.hdr-left{display:flex;align-items:center;gap:10px}
+.logo{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;font-size:15px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.hdr-title{font-size:17px;font-weight:700;color:var(--g9);letter-spacing:-.3px}
+.hdr-date{font-size:13px;color:var(--g4)}
+
+/* ── Main ── */
+.main{max-width:1280px;margin:0 auto;padding:28px 24px}
+
+/* ── Progress ── */
+.prog-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+.prog-card{background:var(--w);border:1px solid var(--g2);border-radius:var(--r);padding:18px 20px 16px;box-shadow:var(--s1);cursor:pointer;transition:box-shadow .15s,border-color .15s,transform .1s}
+.prog-card:hover{box-shadow:var(--s2);border-color:#c7d2fe;transform:translateY(-1px)}
+.prog-card.cur{border-color:var(--p);background:var(--pl)}
+.prog-top{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px}
+.prog-name{font-size:13px;font-weight:600;color:var(--g7)}
+.prog-pct{font-size:22px;font-weight:800;color:var(--p);letter-spacing:-.5px}
+.prog-pct small{font-size:14px;font-weight:500}
+.prog-track{height:6px;background:var(--g1);border-radius:99px;overflow:hidden;margin-bottom:10px}
+.prog-fill{height:100%;background:linear-gradient(90deg,#818cf8,#4f46e5);border-radius:99px;transition:width .5s cubic-bezier(.4,0,.2,1)}
+.prog-sub{display:flex;gap:10px;font-size:11px;color:var(--g4);flex-wrap:wrap}
+
+/* ── Panel ── */
+.panel{background:var(--w);border:1px solid var(--g2);border-radius:var(--r);box-shadow:var(--s1)}
+
+/* ── Dept Tabs ── */
+.dept-tabs{display:flex;border-bottom:1px solid var(--g2);padding:0 8px;overflow-x:auto;scrollbar-width:none}
+.dept-tabs::-webkit-scrollbar{display:none}
+.dtab{padding:16px 22px;font-size:14px;font-weight:500;color:var(--g4);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;transition:color .15s,border-color .15s;letter-spacing:-.1px}
+.dtab:hover{color:var(--p)}
+.dtab.on{color:var(--p);font-weight:700;border-bottom-color:var(--p)}
+
+/* ── Controls ── */
+.ctrl{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--g1);flex-wrap:wrap;gap:12px}
+.period-grp{display:inline-flex;background:var(--g1);border-radius:8px;padding:3px}
+.pbtn{padding:7px 18px;border:none;background:none;border-radius:6px;font-size:13px;font-weight:500;color:var(--g5);cursor:pointer;transition:all .15s;letter-spacing:-.1px}
+.pbtn.on{background:var(--w);color:var(--p);font-weight:700;box-shadow:0 1px 4px rgba(0,0,0,.1)}
+.ctrl-r{display:flex;align-items:center;gap:10px}
+.sub-sel{padding:8px 12px;border:1px solid var(--g2);border-radius:var(--rs);font-size:13px;color:var(--g7);background:var(--w);cursor:pointer;outline:none;transition:border-color .15s}
+.sub-sel:focus{border-color:var(--p)}
+.btn-add{display:inline-flex;align-items:center;gap:5px;padding:8px 16px;background:var(--p);color:#fff;border:none;border-radius:var(--rs);font-size:13px;font-weight:600;cursor:pointer;transition:background .15s;white-space:nowrap}
+.btn-add:hover{background:var(--ph)}
+
+/* ── Task Area ── */
+.task-area{padding:20px}
+.subs-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px}
+.subs-grid.one{grid-template-columns:1fr}
+
+/* Sub box */
+.sbox{border:1px solid var(--g2);border-radius:var(--r);overflow:hidden}
+.sbox-hd{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;background:var(--g1);border-bottom:1px solid var(--g2)}
+.sbox-name{font-size:13px;font-weight:700;color:var(--g7)}
+.sbox-cnt{font-size:11px;font-weight:600;color:var(--g4);background:var(--w);border:1px solid var(--g2);border-radius:99px;padding:2px 9px}
+.cards{padding:12px;display:flex;flex-direction:column;gap:10px;min-height:60px}
+
+/* ── Card ── */
+.card{background:var(--w);border:1px solid var(--g2);border-radius:var(--rs);padding:14px 15px;transition:box-shadow .15s,border-color .15s}
+.sbox .card{background:#fafafa}
+.card:hover{box-shadow:0 2px 8px rgba(79,70,229,.1);border-color:#c7d2fe}
+.card-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;gap:8px}
+.card-name{font-size:14px;font-weight:600;color:var(--g9);line-height:1.4;word-break:keep-all}
+.card-acts{display:flex;gap:4px;flex-shrink:0;opacity:0;transition:opacity .15s}
+.card:hover .card-acts{opacity:1}
+.abtn{width:28px;height:28px;border:1px solid var(--g2);border-radius:6px;background:var(--w);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;transition:all .15s;flex-shrink:0}
+.abtn:hover{border-color:var(--p);background:var(--pl)}
+.abtn.del:hover{border-color:#ef4444;background:#fef2f2}
+.card-meta{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.mi{font-size:12px;color:var(--g5);display:flex;align-items:center;gap:3px}
+.mi.late{color:#dc2626;font-weight:600}
+.sbadge{margin-left:auto;padding:4px 20px 4px 8px;border:none;border-radius:99px;font-size:12px;font-weight:600;cursor:pointer;outline:none;appearance:none;-webkit-appearance:none;background-repeat:no-repeat;background-position:right 6px center;background-size:10px 6px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2394a3b8' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E");transition:opacity .15s}
+.sbadge:hover{opacity:.85}
+.sbadge[data-s="예정"] {background-color:#f1f5f9;color:#64748b}
+.sbadge[data-s="진행중"]{background-color:#eff6ff;color:#2563eb}
+.sbadge[data-s="완료"] {background-color:#f0fdf4;color:#16a34a}
+.sbadge[data-s="지연"] {background-color:#fef2f2;color:#dc2626}
+
+/* ── Empty ── */
+.empty{text-align:center;padding:28px 16px;color:var(--g4)}
+.empty-ico{font-size:30px;margin-bottom:8px}
+.empty-txt{font-size:13px}
+
+/* ── Modal ── */
+.overlay{position:fixed;inset:0;background:rgba(15,23,42,.45);backdrop-filter:blur(3px);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;opacity:0;pointer-events:none;transition:opacity .2s}
+.overlay.open{opacity:1;pointer-events:all}
+.modal{background:var(--w);border-radius:16px;width:100%;max-width:460px;box-shadow:0 24px 48px rgba(0,0,0,.15);transform:scale(.96) translateY(-8px);transition:transform .22s cubic-bezier(.4,0,.2,1)}
+.overlay.open .modal{transform:scale(1) translateY(0)}
+.mhd{padding:22px 24px 18px;border-bottom:1px solid var(--g1);display:flex;align-items:center;justify-content:space-between}
+.mhd-title{font-size:16px;font-weight:700;color:var(--g9)}
+.mclose{width:30px;height:30px;border:1px solid var(--g2);border-radius:7px;background:var(--w);cursor:pointer;font-size:14px;color:var(--g5);display:flex;align-items:center;justify-content:center;transition:all .15s}
+.mclose:hover{background:var(--g1)}
+.mbody{padding:22px 24px;display:flex;flex-direction:column;gap:18px}
+.ff{display:flex;flex-direction:column;gap:6px}
+.fl{font-size:13px;font-weight:600;color:var(--g7)}
+.fl .req{color:#ef4444;margin-left:2px}
+.fi,.fs{padding:10px 13px;border:1px solid var(--g2);border-radius:var(--rs);font-size:14px;color:var(--g9);background:var(--w);outline:none;transition:border-color .15s,box-shadow .15s;width:100%}
+.fi:focus,.fs:focus{border-color:var(--p);box-shadow:0 0 0 3px rgba(79,70,229,.12)}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.mft{padding:16px 24px 22px;display:flex;gap:10px;justify-content:flex-end;border-top:1px solid var(--g1)}
+.btn-cancel{padding:9px 20px;border:1px solid var(--g2);border-radius:var(--rs);background:var(--w);font-size:14px;font-weight:500;color:var(--g5);cursor:pointer;transition:all .15s}
+.btn-cancel:hover{background:var(--g1)}
+.btn-save{padding:9px 22px;border:none;border-radius:var(--rs);background:var(--p);font-size:14px;font-weight:600;color:#fff;cursor:pointer;transition:background .15s}
+.btn-save:hover{background:var(--ph)}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(12px);background:var(--g9);color:#fff;padding:11px 20px;border-radius:10px;font-size:13px;font-weight:500;opacity:0;transition:all .22s;z-index:3000;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ── Responsive ── */
+@media(max-width:960px){.prog-grid{grid-template-columns:repeat(2,1fr)}.subs-grid{grid-template-columns:1fr}}
+@media(max-width:640px){.main{padding:16px}.prog-grid{grid-template-columns:repeat(2,1fr);gap:10px}.prog-card{padding:14px 16px 12px}.prog-pct{font-size:18px}.ctrl{flex-direction:column;align-items:stretch}.ctrl-r{justify-content:flex-end}.dtab{padding:14px 16px;font-size:13px}.frow{grid-template-columns:1fr}.hdr{padding:0 16px}.task-area{padding:16px}}
+@media(max-width:380px){.hdr-title{font-size:15px}}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--g2);border-radius:99px}
+::-webkit-scrollbar-thumb:hover{background:var(--g3)}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="hdr-left">
+    <div class="logo">달</div>
+    <div class="hdr-title">달콤교육 업무 현황</div>
+  </div>
+  <div class="hdr-date" id="today"></div>
+</header>
+
+<main class="main">
+  <div class="prog-grid" id="progGrid"></div>
+
+  <div class="panel">
+    <div class="dept-tabs" id="deptTabs"></div>
+
+    <div class="ctrl">
+      <div class="period-grp" id="periodGrp">
+        <button class="pbtn" data-p="일일">일일</button>
+        <button class="pbtn" data-p="주간">주간</button>
+        <button class="pbtn" data-p="월간">월간</button>
+      </div>
+      <div class="ctrl-r">
+        <select class="sub-sel" id="subSel"></select>
+        <button class="btn-add" id="btnAdd">+ 업무 추가</button>
+      </div>
+    </div>
+
+    <div class="task-area" id="taskArea"></div>
+  </div>
+</main>
+
+<!-- Modal -->
+<div class="overlay" id="overlay">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="mhd">
+      <div class="mhd-title" id="mTitle">업무 추가</div>
+      <button class="mclose" id="mClose">✕</button>
+    </div>
+    <div class="mbody">
+      <div class="ff">
+        <label class="fl" for="fName">업무명 <span class="req">*</span></label>
+        <input class="fi" id="fName" type="text" placeholder="업무명을 입력하세요" maxlength="80" />
+      </div>
+      <div class="frow">
+        <div class="ff">
+          <label class="fl" for="fWho">담당자 <span class="req">*</span></label>
+          <input class="fi" id="fWho" type="text" placeholder="이름" maxlength="20" />
+        </div>
+        <div class="ff">
+          <label class="fl" for="fDue">마감일</label>
+          <input class="fi" id="fDue" type="date" />
+        </div>
+      </div>
+      <div class="frow">
+        <div class="ff">
+          <label class="fl" for="fPeriod">기간</label>
+          <select class="fs" id="fPeriod">
+            <option>일일</option><option>주간</option><option>월간</option>
+          </select>
+        </div>
+        <div class="ff" id="fSubWrap">
+          <label class="fl" for="fSub">담당 구분</label>
+          <select class="fs" id="fSub"></select>
+        </div>
+      </div>
+      <div class="ff">
+        <label class="fl" for="fStatus">상태</label>
+        <select class="fs" id="fStatus">
+          <option>예정</option><option>진행중</option><option>완료</option><option>지연</option>
+        </select>
+      </div>
+    </div>
+    <div class="mft">
+      <button class="btn-cancel" id="mCancel">취소</button>
+      <button class="btn-save" id="mSave">저장</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Config ─────────────────────────────────────────────
+var DEPTS = [
+  { label:'개발파트',     subs:['유아','초등'] },
+  { label:'콘텐츠파트',   subs:['콘텐츠 기획','영상 편집'] },
+  { label:'기획지원파트', subs:[] },
+  { label:'경영지원',     subs:['경영지원 팀장','CS 담당'] }
+];
+var STATUSES = ['예정','진행중','완료','지연'];
+var LS_KEY = 'dalcom_v1';
+
+// ── Helpers ─────────────────────────────────────────────
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7) }
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') }
+function fmtDate(d){ if(!d) return ''; var p=d.split('-'); return p[1]*1+'/'+(p[2]*1) }
+function isLate(due,st){ if(!due||st==='완료') return false; var t=new Date(); t.setHours(0,0,0,0); return new Date(due+'T00:00:00')<t }
+function toast(msg){ var el=$('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(el._t); el._t=setTimeout(function(){ el.classList.remove('show') },2400) }
+function $(id){ return document.getElementById(id) }
+
+// ── Sample ──────────────────────────────────────────────
+function sample(){
+  return [
+    {id:uid(),dept:'개발파트',sub:'유아',        period:'일일',name:'유아 앱 버그 수정',        who:'김유아',due:'2026-06-19',st:'진행중'},
+    {id:uid(),dept:'개발파트',sub:'유아',        period:'주간',name:'7월 콘텐츠 배포 준비',     who:'이유아',due:'2026-06-25',st:'예정'},
+    {id:uid(),dept:'개발파트',sub:'유아',        period:'월간',name:'유아 앱 성능 최적화',      who:'김유아',due:'2026-06-30',st:'예정'},
+    {id:uid(),dept:'개발파트',sub:'초등',        period:'월간',name:'초등 수학 기능 개발',      who:'박초등',due:'2026-06-30',st:'진행중'},
+    {id:uid(),dept:'개발파트',sub:'초등',        period:'주간',name:'초등 앱 QA 테스트',        who:'최초등',due:'2026-06-20',st:'지연'},
+    {id:uid(),dept:'개발파트',sub:'초등',        period:'주간',name:'초등 API 연동 작업',       who:'박초등',due:'2026-06-22',st:'완료'},
+    {id:uid(),dept:'콘텐츠파트',sub:'콘텐츠 기획',period:'주간',name:'7월 콘텐츠 기획안 작성', who:'정기획',due:'2026-06-21',st:'진행중'},
+    {id:uid(),dept:'콘텐츠파트',sub:'콘텐츠 기획',period:'월간',name:'경쟁사 콘텐츠 분석 보고서',who:'강기획',due:'2026-06-30',st:'예정'},
+    {id:uid(),dept:'콘텐츠파트',sub:'콘텐츠 기획',period:'주간',name:'스토리보드 1차 검토',    who:'정기획',due:'2026-06-19',st:'완료'},
+    {id:uid(),dept:'콘텐츠파트',sub:'영상 편집', period:'일일',name:'유아 학습 영상 편집',     who:'윤편집',due:'2026-06-18',st:'지연'},
+    {id:uid(),dept:'콘텐츠파트',sub:'영상 편집', period:'주간',name:'초등 수학 영상 제작',     who:'임편집',due:'2026-06-25',st:'진행중'},
+    {id:uid(),dept:'콘텐츠파트',sub:'영상 편집', period:'월간',name:'6월 영상 최종 납품',      who:'윤편집',due:'2026-06-30',st:'예정'},
+    {id:uid(),dept:'기획지원파트',sub:'',        period:'월간',name:'월간 업무 보고서 작성',   who:'한기획',due:'2026-06-30',st:'진행중'},
+    {id:uid(),dept:'기획지원파트',sub:'',        period:'주간',name:'주간 회의 자료 준비',     who:'오기획',due:'2026-06-18',st:'완료'},
+    {id:uid(),dept:'기획지원파트',sub:'',        period:'주간',name:'파트너사 미팅 준비',      who:'서기획',due:'2026-06-20',st:'예정'},
+    {id:uid(),dept:'경영지원',sub:'경영지원 팀장',period:'월간',name:'2분기 예산 결산',        who:'장팀장',due:'2026-06-25',st:'진행중'},
+    {id:uid(),dept:'경영지원',sub:'경영지원 팀장',period:'주간',name:'채용 면접 일정 조율',    who:'장팀장',due:'2026-06-19',st:'진행중'},
+    {id:uid(),dept:'경영지원',sub:'경영지원 팀장',period:'월간',name:'하반기 채용 계획 수립',  who:'장팀장',due:'2026-06-30',st:'예정'},
+    {id:uid(),dept:'경영지원',sub:'CS 담당',     period:'일일',name:'고객 문의 처리',          who:'배CS',  due:'2026-06-17',st:'완료'},
+    {id:uid(),dept:'경영지원',sub:'CS 담당',     period:'월간',name:'CS 매뉴얼 업데이트',      who:'배CS',  due:'2026-06-30',st:'예정'},
+    {id:uid(),dept:'경영지원',sub:'CS 담당',     period:'주간',name:'불만 접수 사례 분석',     who:'배CS',  due:'2026-06-22',st:'진행중'}
+  ];
+}
+
+// ── State ───────────────────────────────────────────────
+var tasks=[], curDept='개발파트', curPeriod='주간', curSub='', editId=null;
+
+function load(){ try{ var r=localStorage.getItem(LS_KEY); tasks=r?JSON.parse(r):sample() }catch(e){ tasks=sample() } if(!tasks.length) tasks=sample(); save() }
+function save(){ localStorage.setItem(LS_KEY,JSON.stringify(tasks)) }
+
+// ── Progress ────────────────────────────────────────────
+function renderProg(){
+  $('progGrid').innerHTML=DEPTS.map(function(d){
+    var all=tasks.filter(function(t){ return t.dept===d.label });
+    var done=all.filter(function(t){ return t.st==='완료' }).length;
+    var prog=all.filter(function(t){ return t.st==='진행중' }).length;
+    var late=all.filter(function(t){ return t.st==='지연' }).length;
+    var pct=all.length?Math.round(done/all.length*100):0;
+    return '<div class="prog-card'+(curDept===d.label?' cur':'')+'" onclick="switchDept(\''+d.label+'\')">'
+      +'<div class="prog-top"><div class="prog-name">'+d.label+'</div><div class="prog-pct">'+pct+'<small>%</small></div></div>'
+      +'<div class="prog-track"><div class="prog-fill" style="width:'+pct+'%"></div></div>'
+      +'<div class="prog-sub"><span>✅ 완료 '+done+'</span><span>🔵 진행 '+prog+'</span>'+(late?'<span style="color:#dc2626">🔴 지연 '+late+'</span>':'')+'</div>'
+      +'</div>';
+  }).join('');
+}
+
+// ── Tabs ────────────────────────────────────────────────
+function renderTabs(){
+  $('deptTabs').innerHTML=DEPTS.map(function(d){
+    return '<button class="dtab'+(curDept===d.label?' on':'')+'" onclick="switchDept(\''+d.label+'\')">'+d.label+'</button>';
+  }).join('');
+}
+
+function switchDept(label){ curDept=label; curSub=''; renderProg(); renderTabs(); renderSubSel(); renderTasks() }
+
+// ── Period ──────────────────────────────────────────────
+function renderPeriod(){
+  document.querySelectorAll('.pbtn').forEach(function(b){ b.classList.toggle('on',b.dataset.p===curPeriod) });
+}
+
+// ── Sub Select ──────────────────────────────────────────
+function renderSubSel(){
+  var dept=DEPTS.find(function(d){ return d.label===curDept });
+  var sel=$('subSel');
+  if(!dept||!dept.subs.length){ sel.style.display='none'; return }
+  sel.style.display='';
+  sel.innerHTML='<option value="">전체 담당</option>'+dept.subs.map(function(s){
+    return '<option value="'+esc(s)+'"'+(curSub===s?' selected':'')+'>'+esc(s)+'</option>';
+  }).join('');
+}
+
+// ── Tasks ────────────────────────────────────────────────
+function renderTasks(){
+  var dept=DEPTS.find(function(d){ return d.label===curDept });
+  var area=$('taskArea');
+  var fil=tasks.filter(function(t){
+    return t.dept===curDept && t.period===curPeriod && (curSub===''||t.sub===curSub);
+  });
+
+  if(!dept.subs.length){
+    area.innerHTML='<div class="sbox">'
+      +'<div class="sbox-hd"><span class="sbox-name">'+curPeriod+' 업무 목록</span><span class="sbox-cnt">'+fil.length+'건</span></div>'
+      +'<div class="cards">'+(fil.length?fil.map(cardH).join(''):emptyH())+'</div></div>';
+  } else {
+    var show=curSub?[curSub]:dept.subs;
+    area.innerHTML='<div class="subs-grid'+(show.length===1?' one':'')+'">'
+      +show.map(function(s){
+        var sub=fil.filter(function(t){ return t.sub===s });
+        return '<div class="sbox"><div class="sbox-hd"><span class="sbox-name">'+esc(s)+'</span><span class="sbox-cnt">'+sub.length+'건</span></div>'
+          +'<div class="cards">'+(sub.length?sub.map(cardH).join(''):emptyH())+'</div></div>';
+      }).join('')+'</div>';
+  }
+}
+
+function emptyH(){ return '<div class="empty"><div class="empty-ico">📋</div><div class="empty-txt">등록된 업무가 없습니다</div></div>' }
+
+function cardH(t){
+  var late=isLate(t.due,t.st);
+  return '<div class="card">'
+    +'<div class="card-top"><div class="card-name">'+esc(t.name)+'</div>'
+    +'<div class="card-acts">'
+    +'<button class="abtn" onclick="openModal(\''+t.id+'\')" title="수정">✏️</button>'
+    +'<button class="abtn del" onclick="doDelete(\''+t.id+'\')" title="삭제">🗑️</button>'
+    +'</div></div>'
+    +'<div class="card-meta">'
+    +'<span class="mi">👤 '+esc(t.who)+'</span>'
+    +(t.due?'<span class="mi'+(late?' late':'')+'">📅 '+fmtDate(t.due)+(late?' (지연)':'')+'</span>':'')
+    +'<select class="sbadge" data-s="'+t.st+'" onchange="doStatus(\''+t.id+'\',this)">'
+    +STATUSES.map(function(s){ return '<option'+(s===t.st?' selected':'')+'>'+s+'</option>' }).join('')
+    +'</select></div></div>';
+}
+
+// ── Actions ─────────────────────────────────────────────
+function doStatus(id,sel){
+  var t=tasks.find(function(x){ return x.id===id });
+  if(t){ t.st=sel.value; save() }
+  sel.dataset.s=sel.value;
+  renderProg(); renderTasks(); toast('상태가 변경되었습니다');
+}
+
+function doDelete(id){
+  var t=tasks.find(function(x){ return x.id===id });
+  if(!t) return;
+  if(!confirm('"'+t.name+'" 업무를 삭제할까요?')) return;
+  tasks=tasks.filter(function(x){ return x.id!==id });
+  save(); renderProg(); renderTasks(); toast('업무가 삭제되었습니다');
+}
+
+// ── Modal ────────────────────────────────────────────────
+function openModal(id){
+  editId=id||null;
+  var dept=DEPTS.find(function(d){ return d.label===curDept });
+  var hasSub=dept.subs.length>0;
+  var wrap=$('fSubWrap'), fsub=$('fSub');
+  wrap.style.display=hasSub?'':'none';
+  if(hasSub) fsub.innerHTML=dept.subs.map(function(s){ return '<option>'+esc(s)+'</option>' }).join('');
+
+  if(editId){
+    var t=tasks.find(function(x){ return x.id===editId });
+    $('mTitle').textContent='업무 수정';
+    $('fName').value=t.name; $('fWho').value=t.who; $('fDue').value=t.due||'';
+    $('fPeriod').value=t.period; $('fStatus').value=t.st;
+    if(hasSub) fsub.value=t.sub||dept.subs[0];
+  } else {
+    $('mTitle').textContent='업무 추가';
+    $('fName').value=''; $('fWho').value=''; $('fDue').value='';
+    $('fPeriod').value=curPeriod; $('fStatus').value='예정';
+    if(hasSub) fsub.value=curSub||dept.subs[0];
+  }
+  $('overlay').classList.add('open');
+  setTimeout(function(){ $('fName').focus() },200);
+}
+
+function closeModal(){ $('overlay').classList.remove('open'); editId=null }
+
+function doSave(){
+  var name=$('fName').value.trim(), who=$('fWho').value.trim();
+  if(!name){ alert('업무명을 입력해 주세요.'); $('fName').focus(); return }
+  if(!who){  alert('담당자를 입력해 주세요.'); $('fWho').focus(); return }
+  var dept=DEPTS.find(function(d){ return d.label===curDept });
+  var payload={dept:curDept,sub:dept.subs.length?$('fSub').value:'',period:$('fPeriod').value,name:name,who:who,due:$('fDue').value,st:$('fStatus').value};
+  if(editId){
+    var idx=tasks.findIndex(function(t){ return t.id===editId });
+    if(idx>=0) tasks[idx]=Object.assign({},tasks[idx],payload);
+    toast('업무가 수정되었습니다');
+  } else {
+    tasks.push(Object.assign({id:uid()},payload));
+    toast('업무가 추가되었습니다');
+  }
+  save(); closeModal(); renderProg(); renderTasks();
+}
+
+// ── Date ────────────────────────────────────────────────
+function setDate(){
+  var d=new Date(), days=['일','월','화','수','목','금','토'];
+  $('today').textContent=d.getFullYear()+'년 '+(d.getMonth()+1)+'월 '+d.getDate()+'일 ('+days[d.getDay()]+')';
+}
+
+// ── Init ────────────────────────────────────────────────
+setDate(); load();
+
+$('periodGrp').addEventListener('click',function(e){
+  var b=e.target.closest('.pbtn'); if(!b) return;
+  curPeriod=b.dataset.p; renderPeriod(); renderTasks();
+});
+$('subSel').addEventListener('change',function(e){ curSub=e.target.value; renderTasks() });
+$('btnAdd').addEventListener('click',function(){ openModal() });
+$('mClose').addEventListener('click',closeModal);
+$('mCancel').addEventListener('click',closeModal);
+$('mSave').addEventListener('click',doSave);
+$('overlay').addEventListener('click',function(e){ if(e.target===this) closeModal() });
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape') closeModal();
+  if(e.key==='Enter' && $('overlay').classList.contains('open') && document.activeElement.tagName!=='SELECT') doSave();
+});
+
+renderProg(); renderTabs(); renderSubSel(); renderPeriod(); renderTasks();
+</script>
+</body>
+</html>
