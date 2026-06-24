@@ -135,6 +135,9 @@ button,select,input,textarea{font-family:inherit}
 .sbadge[data-s="완료"]    {background-color:#f0fdf4;color:#16a34a}
 .sbadge[data-s="지연"]    {background-color:#fef2f2;color:#dc2626}
 .sbadge[data-s="검토대기"]{background-color:#fef3c7;color:#d97706}
+.sbadge[data-s="피드백요청"]{background-color:#fef3c7;color:#d97706}
+.date-row{display:flex;gap:5px;align-items:center}
+.date-row .fs-dt{flex:1;min-width:0}
 
 /* Priority badge */
 .prio{padding:2px 7px;border-radius:99px;font-size:11px;font-weight:600;flex-shrink:0}
@@ -265,41 +268,75 @@ button,select,input,textarea{font-family:inherit}
       <div class="frow">
         <div class="ff">
           <label class="fl" for="fWho">담당자 <span class="req">*</span></label>
-          <input class="fi" id="fWho" type="text" placeholder="이름" maxlength="20" />
+          <select class="fs" id="fWho" onchange="onWhoChange()">
+            <option value="">선택</option>
+            <optgroup label="대표/관리">
+              <option>대표</option>
+              <option>임정식</option>
+            </optgroup>
+            <optgroup label="개발파트">
+              <option>정지윤</option>
+              <option>곽민주</option>
+              <option>최찬희</option>
+            </optgroup>
+            <optgroup label="콘텐츠파트">
+              <option>백진아</option>
+              <option>한경진</option>
+              <option>김솔아</option>
+              <option>이경현</option>
+            </optgroup>
+            <optgroup label="기획지원파트">
+              <option>김채원</option>
+            </optgroup>
+            <optgroup label="경영지원">
+              <option>남선영</option>
+              <option>김도희</option>
+            </optgroup>
+          </select>
         </div>
         <div class="ff">
-          <label class="fl" for="fDue">마감일</label>
-          <input class="fi" id="fDue" type="date" />
-        </div>
-      </div>
-      <div class="frow">
-        <div class="ff">
-          <label class="fl" for="fDept">부서</label>
+          <label class="fl" for="fDept">부서 <span class="req">*</span></label>
           <select class="fs" id="fDept" onchange="updateSubOptions()"></select>
         </div>
-        <div class="ff" id="fSubWrap">
-          <label class="fl" for="fSub">담당 구분</label>
-          <select class="fs" id="fSub"></select>
+      </div>
+      <div class="ff" id="fSubWrap">
+        <label class="fl" for="fSub">담당 구분 <span class="req">*</span></label>
+        <select class="fs" id="fSub"></select>
+      </div>
+      <div class="ff">
+        <label class="fl">시작일 <span class="req">*</span></label>
+        <div class="date-row">
+          <select class="fs fs-dt" id="fStartY"></select>
+          <select class="fs fs-dt" id="fStartM"></select>
+          <select class="fs fs-dt" id="fStartD"></select>
+        </div>
+      </div>
+      <div class="ff">
+        <label class="fl">마감일 <span class="req">*</span></label>
+        <div class="date-row">
+          <select class="fs fs-dt" id="fDueY"></select>
+          <select class="fs fs-dt" id="fDueM"></select>
+          <select class="fs fs-dt" id="fDueD"></select>
         </div>
       </div>
       <div class="frow">
         <div class="ff">
-          <label class="fl" for="fPeriod">기간</label>
+          <label class="fl" for="fPeriod">기간 <span class="req">*</span></label>
           <select class="fs" id="fPeriod">
             <option>일일</option><option>주간</option><option>월간</option>
           </select>
         </div>
         <div class="ff">
-          <label class="fl" for="fPriority">중요도</label>
+          <label class="fl" for="fPriority">중요도 <span class="req">*</span></label>
           <select class="fs" id="fPriority">
             <option>낮음</option><option selected>보통</option><option>높음</option><option>긴급</option>
           </select>
         </div>
       </div>
       <div class="ff">
-        <label class="fl" for="fStatus">상태</label>
+        <label class="fl" for="fStatus">상태 <span class="req">*</span></label>
         <select class="fs" id="fStatus">
-          <option>예정</option><option>진행중</option><option>완료</option><option>지연</option><option>검토대기</option>
+          <option>예정</option><option>진행중</option><option>완료</option><option>지연</option><option>피드백요청</option>
         </select>
       </div>
       <div class="ff">
@@ -324,12 +361,12 @@ var sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 function dbToTask(r){
   return {id:r.id,dept:r.dept,sub:r.sub,period:r.period,name:r.name,who:r.who,
-    due:r.due||'',st:r.st,priority:r.priority,memo:r.memo,
+    due:r.due||'',startDate:r.start_date||'',st:r.st,priority:r.priority,memo:r.memo,
     archived:r.archived,createdAt:r.created_at,updatedAt:r.updated_at};
 }
 function taskToDb(t){
   return {id:t.id,dept:t.dept,sub:t.sub,period:t.period,name:t.name,who:t.who,
-    due:t.due||null,st:t.st,priority:t.priority,memo:t.memo,
+    due:t.due||null,start_date:t.startDate||null,st:t.st,priority:t.priority,memo:t.memo,
     archived:t.archived,created_at:t.createdAt,updated_at:t.updatedAt};
 }
 function dbToHist(r){
@@ -348,10 +385,24 @@ var DEPTS = [
   { label:'기획지원파트', subs:[] },
   { label:'경영지원',     subs:['경영지원 팀장','CS 담당'] }
 ];
-var STATUSES  = ['예정','진행중','완료','지연','검토대기'];
+var STATUSES  = ['예정','진행중','완료','지연','피드백요청'];
 var LS_KEY    = 'dalcom_v2';
 var LS_HIST   = 'dalcom_history_v1';
-var FIELD_KO  = {name:'업무명',who:'담당자',due:'마감일',st:'상태',priority:'중요도',period:'기간',memo:'메모',archived:'보관'};
+var FIELD_KO  = {name:'업무명',who:'담당자',due:'마감일',startDate:'시작일',st:'상태',priority:'중요도',period:'기간',memo:'메모',archived:'보관'};
+var MEMBERS   = [
+  {name:'대표',   dept:null},
+  {name:'임정식', dept:null},
+  {name:'정지윤', dept:'개발파트'},
+  {name:'곽민주', dept:'개발파트'},
+  {name:'최찬희', dept:'개발파트'},
+  {name:'백진아', dept:'콘텐츠파트'},
+  {name:'한경진', dept:'콘텐츠파트'},
+  {name:'김솔아', dept:'콘텐츠파트'},
+  {name:'이경현', dept:'콘텐츠파트'},
+  {name:'김채원', dept:'기획지원파트'},
+  {name:'남선영', dept:'경영지원'},
+  {name:'김도희', dept:'경영지원'}
+];
 
 // ── Helpers ─────────────────────────────────────────────
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7) }
@@ -366,7 +417,7 @@ function fmtDay(iso){ var d=new Date(iso); var days=['일','월','화','수','�
 function pad(n){ return n<10?'0'+n:n }
 function dueSort(a,b){ if(!a.due&&!b.due) return 0; if(!a.due) return 1; if(!b.due) return -1; return a.due<b.due?-1:a.due>b.due?1:0 }
 function isDelayed(t){ return !t.archived && (isLate(t.due,t.st)||t.st==='지연') }
-function isReview(t){ return !t.archived && t.st==='검토대기' }
+function isReview(t){ return !t.archived && (t.st==='피드백요청'||t.st==='검토대기') }
 
 // ── Sample data ─────────────────────────────────────────
 function sample(){
@@ -724,12 +775,19 @@ async function doStatus(id,sel){
 }
 
 async function doArchive(id){
-  var t=tasks.find(function(x){ return x.id===id });
-  if(!t) return;
-  t.archived=true; t.updatedAt=now();
-  await pushHistory(id,t.name,'archived','false','true');
-  await sbUpsert(t);
-  renderNav(); renderContent(); toast('보관 처리되었습니다');
+  try{
+    console.log('[doArchive] 시작:', id);
+    var t=tasks.find(function(x){ return x.id===id });
+    if(!t){ console.error('[doArchive] task 못 찾음:', id); return; }
+    t.archived=true; t.updatedAt=now();
+    await pushHistory(id,t.name,'archived','false','true');
+    await sbUpsert(t);
+    renderNav(); renderContent(); toast('보관 처리되었습니다');
+    console.log('[doArchive] 완료');
+  }catch(e){
+    console.error('[doArchive] 오류:', e);
+    toast('오류: '+e.message);
+  }
 }
 
 async function doUnarchive(id){
@@ -749,6 +807,40 @@ function switchDept(label){
 }
 
 // ── Modal ────────────────────────────────────────────────
+function buildDateDropdowns(){
+  var years='<option value="">년</option>';
+  for(var y=2020;y<=2030;y++) years+='<option>'+y+'</option>';
+  var months='<option value="">월</option>';
+  for(var m=1;m<=12;m++) months+='<option value="'+(m<10?'0'+m:m)+'">'+(m<10?'0'+m:m)+'</option>';
+  var days='<option value="">일</option>';
+  for(var d=1;d<=31;d++) days+='<option value="'+(d<10?'0'+d:d)+'">'+(d<10?'0'+d:d)+'</option>';
+  ['fStartY','fDueY'].forEach(function(id){ var el=$(id); if(el) el.innerHTML=years });
+  ['fStartM','fDueM'].forEach(function(id){ var el=$(id); if(el) el.innerHTML=months });
+  ['fStartD','fDueD'].forEach(function(id){ var el=$(id); if(el) el.innerHTML=days });
+}
+function getDateVal(prefix){
+  var y=$(prefix+'Y'), m=$(prefix+'M'), d=$(prefix+'D');
+  if(!y||!m||!d||!y.value||!m.value||!d.value) return '';
+  return y.value+'-'+m.value+'-'+d.value;
+}
+function setDateVal(prefix, str){
+  if(!str){ $(prefix+'Y').value=''; $(prefix+'M').value=''; $(prefix+'D').value=''; return; }
+  var p=str.split('-');
+  if(p.length===3){ $(prefix+'Y').value=p[0]; $(prefix+'M').value=p[1]; $(prefix+'D').value=p[2]; }
+}
+function isValidDate(str){
+  if(!str) return false;
+  var dt=new Date(str+'T00:00:00');
+  return !isNaN(dt.getTime()) && dt.toISOString().slice(0,10)===str;
+}
+function onWhoChange(){
+  var who=$('fWho').value;
+  var member=MEMBERS.find(function(m){ return m.name===who });
+  if(member&&member.dept){
+    var fd=$('fDept'); if(fd) fd.value=member.dept;
+    updateSubOptions();
+  }
+}
 function updateSubOptions(){
   var fd=$('fDept'), fw=$('fSubWrap'), fs=$('fSub');
   if(!fd||!fw||!fs) return;
@@ -767,14 +859,16 @@ function openModal(id){
   if(editId){
     var t=tasks.find(function(x){ return x.id===editId });
     if(!t) return;
-    $('fName').value=t.name; $('fWho').value=t.who; $('fDue').value=t.due||'';
+    $('fName').value=t.name; $('fWho').value=t.who||'';
+    setDateVal('fStart', t.startDate||''); setDateVal('fDue', t.due||'');
     $('fPeriod').value=t.period; $('fStatus').value=t.st;
     $('fPriority').value=t.priority||'보통'; $('fMemo').value=t.memo||'';
     fd.value=t.dept;
     updateSubOptions();
     var fs=$('fSub'); if(fs&&t.sub) fs.value=t.sub;
   } else {
-    $('fName').value=''; $('fWho').value=''; $('fDue').value='';
+    $('fName').value=''; $('fWho').value='';
+    setDateVal('fStart',''); setDateVal('fDue','');
     $('fPeriod').value=curPeriod||'주간'; $('fStatus').value='예정';
     $('fPriority').value='보통'; $('fMemo').value='';
     fd.value=curDept;
@@ -787,20 +881,33 @@ function openModal(id){
 function closeModal(){ $('overlay').classList.remove('open'); editId=null }
 
 async function doSave(){
-  var name=$('fName').value.trim(), who=$('fWho').value.trim();
-  if(!name){ alert('업무명을 입력해 주세요.'); $('fName').focus(); return }
-  if(!who){  alert('담당자를 입력해 주세요.'); $('fWho').focus(); return }
-  var fd=$('fDept'), deptLabel=fd?fd.value:curDept;
+  var name=$('fName').value.trim();
+  var who=$('fWho').value;
+  var fd=$('fDept'), deptLabel=fd?fd.value:'';
   var d=DEPTS.find(function(x){ return x.label===deptLabel });
   var fs=$('fSub'), hasSub=d&&d.subs.length>0;
-  var payload={dept:deptLabel,sub:(hasSub&&fs)?fs.value:'',period:$('fPeriod').value,name:name,who:who,due:$('fDue').value,st:$('fStatus').value,priority:$('fPriority').value,memo:$('fMemo').value.trim()};
+  var sub=(hasSub&&fs)?fs.value:'';
+  var startDate=getDateVal('fStart');
+  var due=getDateVal('fDue');
+
+  if(!name){ alert('업무명을 입력해 주세요.'); $('fName').focus(); return }
+  if(!who){ alert('담당자를 선택해 주세요.'); $('fWho').focus(); return }
+  if(!deptLabel){ alert('부서를 선택해 주세요.'); fd.focus(); return }
+  if(hasSub&&!sub){ alert('담당 구분을 선택해 주세요.'); fs.focus(); return }
+  if(!startDate){ alert('시작일을 선택해 주세요.'); return }
+  if(!isValidDate(startDate)){ alert('시작일이 올바르지 않습니다 (예: 2월 31일 등).'); return }
+  if(!due){ alert('마감일을 선택해 주세요.'); return }
+  if(!isValidDate(due)){ alert('마감일이 올바르지 않습니다 (예: 2월 31일 등).'); return }
+  if(startDate>due){ alert('마감일은 시작일보다 같거나 늦어야 합니다.'); return }
+
+  var payload={dept:deptLabel,sub:sub,period:$('fPeriod').value,name:name,who:who,startDate:startDate,due:due,st:$('fStatus').value,priority:$('fPriority').value,memo:$('fMemo').value.trim()};
 
   var upsertTarget;
   if(editId){
     var idx=tasks.findIndex(function(t){ return t.id===editId });
     if(idx>=0){
       var old=tasks[idx];
-      for(var i=0,fields=['name','who','due','st','priority','period','memo','dept','sub'];i<fields.length;i++){
+      for(var i=0,fields=['name','who','startDate','due','st','priority','period','memo','dept','sub'];i<fields.length;i++){
         var f=fields[i];
         if(old[f]!==payload[f]) await pushHistory(editId,payload.name||old.name,f,old[f],payload[f]);
       }
@@ -839,6 +946,7 @@ document.addEventListener('keydown',function(e){
 
 async function init(){
   setDate();
+  buildDateDropdowns();
   $('content').innerHTML='<div class="empty"><div class="empty-ico">⏳</div><div class="empty-txt">데이터를 불러오는 중...</div></div>';
   await load();
   await loadHistory();
