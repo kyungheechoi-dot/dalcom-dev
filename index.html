@@ -139,6 +139,11 @@ button,select,input,textarea{font-family:inherit}
 .sbadge[data-s="피드백요청"]{background-color:#fef3c7;color:#d97706}
 .date-row{display:flex;gap:5px;align-items:center}
 .date-row .fs-dt{flex:1;min-width:0}
+.collab-grid{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.ctag{padding:4px 12px;border:1px solid var(--g2);border-radius:99px;font-size:12px;font-weight:500;cursor:pointer;background:var(--w);color:var(--g6);transition:all .15s;line-height:1.4}
+.ctag.on{background:var(--pl);border-color:var(--p);color:var(--p);font-weight:600}
+.ctag:disabled{opacity:.35;cursor:default}
+.card-collab{font-size:12px;color:var(--g4);margin-top:4px}
 
 /* Priority badge */
 .prio{padding:2px 7px;border-radius:99px;font-size:11px;font-weight:600;flex-shrink:0}
@@ -305,6 +310,10 @@ button,select,input,textarea{font-family:inherit}
         <input class="fi" id="fName" type="text" placeholder="업무명을 입력하세요" maxlength="80" />
       </div>
       <div class="ff">
+        <label class="fl">협업자 <span style="font-weight:400;color:var(--g4);font-size:12px">(선택)</span></label>
+        <div class="collab-grid" id="fCollab"></div>
+      </div>
+      <div class="ff">
         <label class="fl">시작일 <span class="req">*</span></label>
         <div class="date-row">
           <select class="fs fs-dt" id="fStartY"></select>
@@ -360,14 +369,17 @@ var SUPABASE_URL = 'https://amrsbtqezjpezxchwyeo.supabase.co';
 var SUPABASE_KEY = 'sb_publishable_nk5nN4b3IsszDddZYhEaig_N_2d1r97';
 var sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+function parseCollab(v){ try{ var r=JSON.parse(v||'[]'); return Array.isArray(r)?r:[] }catch(e){ return [] } }
 function dbToTask(r){
   return {id:r.id,dept:r.dept,sub:r.sub,period:r.period,name:r.name,who:r.who,
     due:r.due||'',startDate:r.start_date||'',st:r.st,priority:r.priority,memo:r.memo,
+    collab:parseCollab(r.collab),
     archived:r.archived,createdAt:r.created_at,updatedAt:r.updated_at};
 }
 function taskToDb(t){
   return {id:t.id,dept:t.dept,sub:t.sub,period:t.period,name:t.name,who:t.who,
     due:t.due||null,start_date:t.startDate||null,st:t.st,priority:t.priority,memo:t.memo,
+    collab:JSON.stringify(t.collab||[]),
     archived:t.archived,created_at:t.createdAt,updated_at:t.updatedAt};
 }
 function dbToHist(r){
@@ -640,12 +652,17 @@ function renderDeptView(){
       +'<div class="cards">'+(fil.length?fil.map(cardH).join(''):emptyH())+'</div></div></div>';
   } else {
     var show=curSub?[curSub]:dept.subs;
-    taskAreaH='<div class="task-area"><div class="subs-grid'+(show.length===1?' one':'')+'">'
+    var unmatched=curSub?[]:fil.filter(function(t){ return show.indexOf(t.sub)===-1 });
+    var allShow=show.concat(unmatched.length?['__기타__']:[]);
+    taskAreaH='<div class="task-area"><div class="subs-grid'+(allShow.length===1?' one':'')+'">'
       +show.map(function(s){
         var sub=fil.filter(function(t){ return t.sub===s });
         return '<div class="sbox"><div class="sbox-hd"><span class="sbox-name">'+esc(s)+'</span><span class="sbox-cnt">'+sub.length+'건</span></div>'
           +'<div class="cards">'+(sub.length?sub.map(cardH).join(''):emptyH())+'</div></div>';
-      }).join('')+'</div></div>';
+      }).join('')
+      +(unmatched.length?'<div class="sbox"><div class="sbox-hd"><span class="sbox-name">미분류</span><span class="sbox-cnt">'+unmatched.length+'건</span></div>'
+        +'<div class="cards">'+unmatched.map(cardH).join('')+'</div></div>':'')
+      +'</div></div>';
   }
 
   c.innerHTML=progH+'<div class="panel">'+tabsH+ctrlH+taskAreaH+'</div>';
@@ -761,6 +778,7 @@ function cardH(t){
        +STATUSES.map(function(s){ return '<option'+(s===t.st?' selected':'')+'>'+s+'</option>' }).join('')+'</select>')
     +'</div>'
     +(t.memo?'<div class="card-memo">'+esc(t.memo)+'</div>':'')
+    +(t.collab&&t.collab.length?'<div class="card-collab">🤝 '+t.collab.map(esc).join(' · ')+'</div>':'')
     +'</div>';
 }
 
@@ -848,6 +866,23 @@ function isValidDate(str){
   var dt=new Date(str+'T00:00:00');
   return !isNaN(dt.getTime()) && dt.toISOString().slice(0,10)===str;
 }
+function buildCollabOptions(){
+  var el=$('fCollab'); if(!el) return;
+  el.innerHTML=MEMBERS.map(function(m){
+    return '<button type="button" class="ctag" data-name="'+esc(m.name)+'" onclick="toggleCollab(this)">'+esc(m.name)+'</button>';
+  }).join('');
+}
+function toggleCollab(btn){ btn.classList.toggle('on') }
+function getCollab(){
+  var sel=[];
+  document.querySelectorAll('#fCollab .ctag.on').forEach(function(b){ sel.push(b.dataset.name) });
+  return sel;
+}
+function setCollab(arr){
+  document.querySelectorAll('#fCollab .ctag').forEach(function(b){
+    b.classList.toggle('on', arr.indexOf(b.dataset.name)!==-1);
+  });
+}
 function onWhoChange(){
   var who=$('fWho').value;
   var member=MEMBERS.find(function(m){ return m.name===who });
@@ -855,6 +890,11 @@ function onWhoChange(){
     var fd=$('fDept'); if(fd) fd.value=member.dept;
     updateSubOptions();
   }
+  document.querySelectorAll('#fCollab .ctag').forEach(function(b){
+    var isMe=b.dataset.name===who;
+    b.disabled=isMe;
+    if(isMe) b.classList.remove('on');
+  });
 }
 function updateSubOptions(){
   var fd=$('fDept'), fw=$('fSubWrap'), fs=$('fSub'), lbl=$('fSubLabel');
@@ -884,6 +924,7 @@ function openModal(id){
     fd.value=t.dept;
     updateSubOptions();
     var fs=$('fSub'); if(fs&&t.sub) fs.value=t.sub;
+    setCollab(t.collab||[]); onWhoChange();
   } else {
     $('fName').value=''; $('fWho').value='';
     setDateVal('fStart',''); setDateVal('fDue','');
@@ -891,6 +932,7 @@ function openModal(id){
     $('fPriority').value='보통'; $('fMemo').value='';
     fd.value=curDept;
     updateSubOptions();
+    setCollab([]); onWhoChange();
   }
   $('overlay').classList.add('open');
   setTimeout(function(){ $('fName').focus() },200);
@@ -918,7 +960,7 @@ async function doSave(){
   if(!isValidDate(due)){ alert('마감일이 올바르지 않습니다 (예: 2월 31일 등).'); return }
   if(startDate>due){ alert('마감일은 시작일보다 같거나 늦어야 합니다.'); return }
 
-  var payload={dept:deptLabel,sub:sub,period:$('fPeriod').value,name:name,who:who,startDate:startDate,due:due,st:$('fStatus').value,priority:$('fPriority').value,memo:$('fMemo').value.trim()};
+  var payload={dept:deptLabel,sub:sub,period:$('fPeriod').value,name:name,who:who,startDate:startDate,due:due,st:$('fStatus').value,priority:$('fPriority').value,memo:$('fMemo').value.trim(),collab:getCollab()};
 
   var upsertTarget;
   if(editId){
@@ -965,6 +1007,7 @@ document.addEventListener('keydown',function(e){
 async function init(){
   setDate();
   buildDateDropdowns();
+  buildCollabOptions();
   $('content').innerHTML='<div class="empty"><div class="empty-ico">⏳</div><div class="empty-txt">데이터를 불러오는 중...</div></div>';
   await load();
   await loadHistory();
