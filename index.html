@@ -408,7 +408,9 @@ async function load(){
     if(res.error) throw res.error;
     tasks=res.data.map(dbToTask);
     localStorage.setItem(LS_KEY,JSON.stringify(tasks));
+    console.log('[Supabase] tasks 로드 성공:', tasks.length+'건');
   }catch(e){
+    console.error('[Supabase] tasks 로드 실패:', e);
     var cached=localStorage.getItem(LS_KEY);
     if(cached){ tasks=JSON.parse(cached) }
     else{
@@ -424,7 +426,12 @@ function save(){ localStorage.setItem(LS_KEY,JSON.stringify(tasks)) }
 async function sbUpsert(t){
   localStorage.setItem(LS_KEY,JSON.stringify(tasks));
   var res=await sb.from('tasks').upsert(taskToDb(t));
-  if(res.error) toast('저장 오류: '+res.error.message);
+  if(res.error){
+    console.error('[Supabase] upsert 실패:', res.error);
+    toast('저장 오류: '+res.error.message);
+  } else {
+    console.log('[Supabase] upsert 성공:', t.id);
+  }
 }
 
 async function loadHistory(){
@@ -448,7 +455,8 @@ async function pushHistory(taskId,taskName,field,from,to){
   history.unshift(entry);
   if(history.length>500) history=history.slice(0,500);
   localStorage.setItem(LS_HIST,JSON.stringify(history));
-  await sb.from('task_history').insert(histToDb(entry));
+  var hres=await sb.from('task_history').insert(histToDb(entry));
+  if(hres.error) console.error('[Supabase] history insert 실패:', hres.error);
 }
 
 // ── Badges ───────────────────────────────────────────────
