@@ -464,7 +464,7 @@ function sample(){
 }
 
 // ── State ───────────────────────────────────────────────
-var tasks=[], history=[], curView='summary', curDept='개발파트', curPeriod='주간', curSub='', showArchived=false, editId=null;
+var tasks=[], taskHistory=[], curView='summary', curDept='개발파트', curPeriod='주간', curSub='', showArchived=false, editId=null;
 
 // ── Storage ─────────────────────────────────────────────
 async function load(){
@@ -503,23 +503,23 @@ async function loadHistory(){
   try{
     var res=await sb.from('task_history').select('*').order('changed_at',{ascending:false}).limit(200);
     if(res.error) throw res.error;
-    history=res.data.map(dbToHist);
-    localStorage.setItem(LS_HIST,JSON.stringify(history));
+    taskHistory=res.data.map(dbToHist);
+    localStorage.setItem(LS_HIST,JSON.stringify(taskHistory));
   }catch(e){
     var cached=localStorage.getItem(LS_HIST);
-    history=cached?JSON.parse(cached):[];
+    taskHistory=cached?JSON.parse(cached):[];
   }
 }
 
-function saveHistory(){ localStorage.setItem(LS_HIST,JSON.stringify(history)) }
+function saveHistory(){ localStorage.setItem(LS_HIST,JSON.stringify(taskHistory)) }
 
 // ── Change history ───────────────────────────────────────
 async function pushHistory(taskId,taskName,field,from,to){
   if(String(from||'')===String(to||'')) return;
   var entry={id:uid(),taskId:taskId,taskName:taskName,field:field,from:String(from||''),to:String(to||''),changedAt:now()};
-  history.unshift(entry);
-  if(history.length>500) history=history.slice(0,500);
-  localStorage.setItem(LS_HIST,JSON.stringify(history));
+  taskHistory.unshift(entry);
+  if(taskHistory.length>500) taskHistory=taskHistory.slice(0,500);
+  localStorage.setItem(LS_HIST,JSON.stringify(taskHistory));
   var hres=await sb.from('task_history').insert(histToDb(entry));
   if(hres.error) console.error('[Supabase] history insert 실패:', hres.error);
 }
@@ -706,11 +706,11 @@ function reviewHTML(){
 
 // ── History View ─────────────────────────────────────────
 function historyHTML(){
-  var h='<div class="sec-hd"><div class="sec-title">📋 변경 이력</div><div class="sec-sub">최근 '+Math.min(history.length,200)+'건</div></div>';
-  if(!history.length){
+  var h='<div class="sec-hd"><div class="sec-title">📋 변경 이력</div><div class="sec-sub">최근 '+Math.min(taskHistory.length,200)+'건</div></div>';
+  if(!taskHistory.length){
     return h+'<div class="hist-panel"><div class="empty"><div class="empty-ico">📋</div><div class="empty-txt">변경 이력이 없습니다<br><span style="font-size:12px;margin-top:4px;display:block">업무를 수정하면 자동으로 기록됩니다</span></div></div></div>';
   }
-  var shown=history.slice(0,200);
+  var shown=taskHistory.slice(0,200);
   h+='<div class="hist-panel">';
   var lastDay='';
   shown.forEach(function(e){
