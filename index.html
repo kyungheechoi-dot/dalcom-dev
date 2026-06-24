@@ -863,8 +863,11 @@ function setDateVal(prefix, str){
 }
 function isValidDate(str){
   if(!str) return false;
-  var dt=new Date(str+'T00:00:00');
-  return !isNaN(dt.getTime()) && dt.toISOString().slice(0,10)===str;
+  var p=str.split('-');
+  if(p.length!==3) return false;
+  var y=+p[0], m=+p[1], d=+p[2];
+  var dt=new Date(y, m-1, d);
+  return dt.getFullYear()===y && dt.getMonth()===m-1 && dt.getDate()===d;
 }
 function buildCollabOptions(){
   var el=$('fCollab'); if(!el) return;
