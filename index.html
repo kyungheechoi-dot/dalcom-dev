@@ -142,6 +142,7 @@ button,select,input,textarea{font-family:inherit}
 .prio-보통{background:#eff6ff;color:#2563eb}
 .prio-높음{background:#fff7ed;color:#ea580c}
 .prio-긴급{background:#fef2f2;color:#dc2626}
+.prio-period{background:#f0fdf4;color:#15803d}
 
 /* ── List view ── */
 .list-panel{background:var(--w);border:1px solid var(--g2);border-radius:var(--r);box-shadow:var(--s1);overflow:hidden;margin-bottom:20px}
@@ -575,8 +576,9 @@ function renderDeptView(){
     +'<button class="btn-add" onclick="openModal()">+ 업무 추가</button>'
     +'</div></div>';
 
+  var periodIncludes={'월간':['월간','주간','일일'],'주간':['주간','일일'],'일일':['일일']};
   var fil=tasks.filter(function(t){
-    return t.dept===curDept && t.period===curPeriod && (curSub===''||t.sub===curSub) && (!t.archived||showArchived);
+    return t.dept===curDept && (periodIncludes[curPeriod]||[curPeriod]).indexOf(t.period)!==-1 && (curSub===''||t.sub===curSub) && (!t.archived||showArchived);
   });
 
   var taskAreaH;
@@ -697,6 +699,7 @@ function cardH(t){
     +'<span class="mi">👤 '+esc(t.who)+'</span>'
     +(t.due?'<span class="mi'+(late?' late':'')+'">📅 '+fmtDate(t.due)+(late?' ⚠️':'')+'</span>':'')
     +'<span class="prio prio-'+esc(t.priority||'보통')+'">'+esc(t.priority||'보통')+'</span>'
+    +(t.period!==curPeriod?'<span class="prio prio-period">'+esc(t.period)+'</span>':'')
     +(t.archived
       ?'<span class="prio prio-낮음">보관됨</span>'
       :'<select class="sbadge" data-s="'+esc(t.st)+'" onchange="doStatus(\''+t.id+'\',this)">'
