@@ -121,6 +121,7 @@ button,select,input,textarea{font-family:inherit}
 .abtn:hover{border-color:var(--p);background:var(--pl)}
 .abtn.arch:hover{border-color:#f59e0b;background:#fffbeb}
 .abtn.unarch:hover{border-color:#22c55e;background:#f0fdf4}
+.abtn.del:hover{border-color:#ef4444;background:#fef2f2}
 .card-meta{display:flex;align-items:center;flex-wrap:wrap;gap:6px}
 .mi{font-size:12px;color:var(--g5);display:flex;align-items:center;gap:3px}
 .mi.late{color:#dc2626;font-weight:600}
@@ -261,10 +262,6 @@ button,select,input,textarea{font-family:inherit}
       <button class="mclose" id="mClose">✕</button>
     </div>
     <div class="mbody">
-      <div class="ff">
-        <label class="fl" for="fName">업무명 <span class="req">*</span></label>
-        <input class="fi" id="fName" type="text" placeholder="업무명을 입력하세요" maxlength="80" />
-      </div>
       <div class="frow">
         <div class="ff">
           <label class="fl" for="fWho">담당자 <span class="req">*</span></label>
@@ -300,8 +297,12 @@ button,select,input,textarea{font-family:inherit}
         </div>
       </div>
       <div class="ff" id="fSubWrap">
-        <label class="fl" for="fSub">담당 구분 <span class="req">*</span></label>
+        <label class="fl" id="fSubLabel" for="fSub">담당 구분 <span class="req">*</span></label>
         <select class="fs" id="fSub"></select>
+      </div>
+      <div class="ff">
+        <label class="fl" for="fName">업무명 <span class="req">*</span></label>
+        <input class="fi" id="fName" type="text" placeholder="업무명을 입력하세요" maxlength="80" />
       </div>
       <div class="ff">
         <label class="fl">시작일 <span class="req">*</span></label>
@@ -380,7 +381,7 @@ function histToDb(h){
 
 // ── Config ──────────────────────────────────────────────
 var DEPTS = [
-  { label:'개발파트',     subs:['유아','초등'] },
+  { label:'개발파트',     subs:['프로젝트','스터디','교재','기타'] },
   { label:'콘텐츠파트',   subs:['콘텐츠 기획','영상 편집'] },
   { label:'기획지원파트', subs:[] },
   { label:'경영지원',     subs:['경영지원 팀장','CS 담당'] }
@@ -731,6 +732,7 @@ function listItemH(t, showDept){
     +'</div>'
     +'<div class="list-acts">'
     +'<button class="abtn" onclick="openModal(\''+t.id+'\')" title="수정">✏️</button>'
+    +'<button class="abtn del" onclick="doDelete(\''+t.id+'\')" title="삭제">🗑️</button>'
     +'<button class="abtn arch" onclick="doArchive(\''+t.id+'\')" title="보관">📦</button>'
     +'</div></div>';
 }
@@ -743,7 +745,9 @@ function cardH(t){
     +'<div class="card-acts">'
     +(t.archived
       ?'<button class="abtn unarch" onclick="doUnarchive(\''+t.id+'\')" title="복원">♻️</button>'
+       +'<button class="abtn del" onclick="doDelete(\''+t.id+'\')" title="삭제">🗑️</button>'
       :'<button class="abtn" onclick="openModal(\''+t.id+'\')" title="수정">✏️</button>'
+       +'<button class="abtn del" onclick="doDelete(\''+t.id+'\')" title="삭제">🗑️</button>'
        +'<button class="abtn arch" onclick="doArchive(\''+t.id+'\')" title="보관">📦</button>')
     +'</div></div>'
     +'<div class="card-meta">'
@@ -788,6 +792,17 @@ async function doArchive(id){
     console.error('[doArchive] 오류:', e);
     toast('오류: '+e.message);
   }
+}
+
+async function doDelete(id){
+  var t=tasks.find(function(x){ return x.id===id });
+  if(!t) return;
+  if(!confirm('"'+t.name+'" 업무를 삭제하시겠습니까?\n삭제 후 복구할 수 없습니다.')) return;
+  tasks=tasks.filter(function(x){ return x.id!==id });
+  localStorage.setItem(LS_KEY,JSON.stringify(tasks));
+  var res=await sb.from('tasks').delete().eq('id',id);
+  if(res.error) console.error('[Supabase] delete 실패:', res.error);
+  renderNav(); renderContent(); toast('업무가 삭제되었습니다');
 }
 
 async function doUnarchive(id){
@@ -842,12 +857,15 @@ function onWhoChange(){
   }
 }
 function updateSubOptions(){
-  var fd=$('fDept'), fw=$('fSubWrap'), fs=$('fSub');
+  var fd=$('fDept'), fw=$('fSubWrap'), fs=$('fSub'), lbl=$('fSubLabel');
   if(!fd||!fw||!fs) return;
   var d=DEPTS.find(function(x){ return x.label===fd.value });
   var has=d&&d.subs.length>0;
   fw.style.display=has?'':'none';
-  if(has) fs.innerHTML=d.subs.map(function(s){ return '<option>'+esc(s)+'</option>' }).join('');
+  if(has){
+    fs.innerHTML=d.subs.map(function(s){ return '<option>'+esc(s)+'</option>' }).join('');
+    if(lbl) lbl.innerHTML=(fd.value==='개발파트'?'업무 구분':'담당 구분')+' <span class="req">*</span>';
+  }
 }
 
 function openModal(id){
